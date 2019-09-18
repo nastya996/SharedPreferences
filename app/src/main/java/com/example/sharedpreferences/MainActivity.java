@@ -1,193 +1,127 @@
 package com.example.sharedpreferences;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.os.PersistableBundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.BaseAdapter;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
+
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.os.Bundle;
-import android.os.Handler;
-import android.view.ContextMenu;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ListView;
-import android.widget.SimpleAdapter;
-import android.widget.TextView;
-import android.widget.Toast;
+import com.example.sharedpreferences.R;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
-public class MainActivity extends AppCompatActivity {
 
-    private ListView listView;
-    private String[] from;
-    private final String ATTRIBUTE_TITLE_TEXT = "title";
-    private final String ATTRIBUTE_SUBTITLE_TEXT = "subtitle";
-    int[] to = {R.id.text_1, R.id.text_2};
-    private int delete = 1;
-    SimpleAdapter listContentAdapter;
+public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener  {
 
-    private ArrayList<Map<String, Object>> data;
-    SharedPreferences sharedPreferences;
-    private String PREFS_FILE = "prefs";
-
-    private String LARGE_TEXT = "large text";
-    private String KEY = "key";
-    private TextView textView;
-    private SwipeRefreshLayout mSwipeRefreshLayout;
-
-    private ArrayList<Integer> integerArrayList = new ArrayList<>();
-    private int i;
-    AdapterView.AdapterContextMenuInfo qwe;
+    private static final String LARGE_TEXT = "large_text";
+    List<Map<String, String>> values = new ArrayList<>();
+    public static final String APP_PREFERENCES = "app_preferences";
+    SharedPreferences mSharedPreferences;
+    BaseAdapter listContentAdapter;
+    SwipeRefreshLayout mSwipeRefreshLayout;
+    ArrayList<String> deletedValues = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        initViews();
+        setContentView(R.layout.list);
 
-        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                refreshList();
-                mSwipeRefreshLayout.setColorSchemeResources
-                        (R.color.light_blue, R.color.middle_blue, R.color.deep_blue);
-            }
-        });
+        ListView list = findViewById(R.id.listView_text_1);
+        mSharedPreferences = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE);
 
-        String[] values = prepareContent();
+        boolean hasVisited = mSharedPreferences.getBoolean("hasVisited", false);
 
-        addData(values);
-
-        sharedPreferences = getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
-
-        shareEdit();
-
-        listContentAdapter = createAdapter();
-        listView.setAdapter(listContentAdapter);
-        registerForContextMenu(listView);
-
-        if (savedInstanceState == null) {
-            Toast.makeText(this, getString(R.string.text_view_null), Toast.LENGTH_LONG).show();
-        } else {
-            integerArrayList = savedInstanceState.getIntegerArrayList(KEY);
-            assert integerArrayList != null;
-            for (int m = 0; m < integerArrayList.size(); m++) {
-                data.remove(integerArrayList.get(m).intValue());
-            }
-            listContentAdapter.notifyDataSetChanged();
+        if (!hasVisited) {
+            SharedPreferences.Editor editor = mSharedPreferences.edit();
+            editor.putBoolean("hasVisited", true);
+            editor.putString(LARGE_TEXT, getString(R.string.large_text));
+            editor.apply();
         }
-        removePos();
-    }
 
-    private void removePos() {
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        values = prepareContent();
+        if (savedInstanceState != null) {
+            deletedValues = savedInstanceState.getStringArrayList("my_key");
+        }
+
+        if (deletedValues.size() > 0) {
+            for (int k = 0; k < deletedValues.size(); k++) {
+                for (int i = 0; i < values.size(); i++) {
+                    if (values.get(i).values().iterator().next().equals(deletedValues.get(k))) {
+                        values.remove(i);
+                        break;
+                    }
+                }
+            }
+        }
+
+        String[] from = {"text_1", "text_2"};
+        int[] to = {R.id.text_1, R.id.text_2};
+        listContentAdapter = createAdapter(values, from, to);
+
+        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                final int deletePosition = position;
-
-                Toast.makeText(MainActivity.this, (R.string.remove), Toast.LENGTH_LONG).show();
-                data.remove(deletePosition);
-                integerArrayList.add(deletePosition);
+                deletedValues.add(values.get(position).values().iterator().next());
+                values.remove(position);
                 listContentAdapter.notifyDataSetChanged();
             }
         });
+        list.setAdapter(listContentAdapter);
+
+        mSwipeRefreshLayout = findViewById(R.id.swipe_container);
+        mSwipeRefreshLayout.setOnRefreshListener(this);
+
+        mSwipeRefreshLayout.setColorSchemeResources(android.R.color.holo_blue_bright);
     }
 
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
+
+    private BaseAdapter createAdapter(List<Map<String, String>> values, String[] from, int[] to) {
+        return new SimpleAdapter(this, values, R.layout.list, from, to);
+    }
+
+    private List<Map<String, String>> prepareContent() {
+
+        String[] strings = {""};
+        if (mSharedPreferences.contains(LARGE_TEXT)) {
+            strings = mSharedPreferences.getString(LARGE_TEXT, "").split("\n\n");
+        }
+
+        List<Map<String, String>> list = new ArrayList<>();
+
+        for (int i = 0; i < strings.length; i++) {
+            Map<String, String> map = new HashMap<String, String>();
+            map.put("text_1", strings[i]);
+            map.put("text_2", String.valueOf(strings[i].length()));
+            list.add(map);
+        }
+
+        return list;
+    }
+
+     @Override
+    public void onRefresh() {
+        mSwipeRefreshLayout.setRefreshing(false);
+        values.clear();
+        values.addAll(prepareContent());
+        listContentAdapter.notifyDataSetChanged();
+    }
+
+   @Override
+    public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putIntegerArrayList(KEY, integerArrayList);
-    }
-
-    public void refreshList() {
-        mSwipeRefreshLayout.setRefreshing(true);
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-
-                //Останавливаем обновление:
-                mSwipeRefreshLayout.setRefreshing(false);
-                shareEdit();
-
-                int min = 0;
-                int max = 100;
-                Random random = new Random();
-                int i = random.nextInt((max - min + 1) + min);
-                textView = findViewById(R.id.textView);
-                textView.setText(String.valueOf(i) + "\n" + i + "\n" + integerArrayList);
-            }
-        }, 3000);
-    }
-
-    private void shareEdit() {
-        if (sharedPreferences.contains(getString(R.string.large_text))) {
-            textView.setText(sharedPreferences.getString(LARGE_TEXT, ""));
-        } else {
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putString(LARGE_TEXT, String.valueOf(R.string.large_text));
-            editor.apply();
-        }
-    }
-
-    private void addData(String[] values) {
-        data = new ArrayList<Map<String, Object>>(values.length);
-        Map<String, Object> mapText;
-
-        for (int i = 0; i < values.length; i++) {
-            mapText = new HashMap<>();
-
-            String ATTRIBUTE_TITLE_TEXT = "title";
-            mapText.put(ATTRIBUTE_TITLE_TEXT, values[i]);
-            mapText.put(ATTRIBUTE_SUBTITLE_TEXT, "" + values[i].length());
-            data.add(mapText);
-        }
-    }
-
-    private void initViews() {
-
-        listView = findViewById(R.id.listView_text_1);
-        textView = findViewById(R.id.text_1);
-        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipeRefresh);
-    }
-
-    private SimpleAdapter createAdapter() {
-        return new SimpleAdapter(this, data, R.layout.list,
-                from, to);
-    }
-
-    private String[] prepareContent() {
-        return getString(R.string.large_text).split("\n\n");
-    }
-
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v,
-                                    ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        menu.add(0, delete, 0, (R.string.delete_text));
-    }
-
-    @Override
-    public boolean onContextItemSelected(final MenuItem item) {
-
-        if (item.getItemId() == delete) {
-
-            qwe = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-
-
-            i = qwe.position;
-            data.remove(qwe.position);
-
-            integerArrayList.add(qwe.position);
-
-            listContentAdapter.notifyDataSetChanged();
-            return true;
-        }
-
-        return super.onContextItemSelected(item);
+        Log.d("hello", "onSaveInstanceState() called with: deletedValues = " + deletedValues.size());
+        outState.putStringArrayList("my_key", deletedValues);
     }
 }
