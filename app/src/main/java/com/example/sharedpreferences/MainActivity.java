@@ -35,7 +35,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.list);
+        setContentView(R.layout.activity_main);
 
         ListView list = findViewById(R.id.listView_text_1);
         mSharedPreferences = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE);

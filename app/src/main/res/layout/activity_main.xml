@@ -18,6 +18,11 @@
             android:textColor="@color/color_text"
             android:textSize="26sp" />
 
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipe_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
         <ListView
             android:id="@+id/listView_text_1"
             android:layout_width="wrap_content"
@@ -25,5 +30,7 @@
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </RelativeLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
